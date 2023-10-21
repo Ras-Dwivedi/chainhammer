@@ -38,6 +38,8 @@ from hammer.config import FILE_LAST_EXPERIMENT, EMPTY_BLOCKS_AT_END
 from hammer.deploy import loadFromDisk
 from hammer.clienttools import web3connection, unlockAccount
 
+#account manager
+from hammer.account_manager import OWNER_ACCOUNT
 
 ##########################
 ## smart contract related:
@@ -58,6 +60,7 @@ def contract_set_via_web3(contract, arg, hashes = None, privateFor=PRIVATE_FOR, 
     call the .set(arg) method, possibly with 'privateFor' tx-property
     using the web3 method 
     """
+    print("web3 contract set")
     txParameters = {'from': w3.eth.defaultAccount,
                     'gas' : gas}
     if privateFor:
@@ -156,21 +159,34 @@ def contract_set_via_RPC(contract, arg, hashes = None, privateFor=PRIVATE_FOR, g
     suggestion by @jpmsam 
     https://github.com/jpmorganchase/quorum/issues/346#issuecomment-382216968
     """
+    print("contract set via rpc")
     method_ID = contract_method_ID("mintDRC", contract.abi) # TODO: make this "set" flexible for any method name
     data = argument_encoding(method_ID,arg)
+    print(w3.eth.defaultAccount)
     txParameters = {'from': w3.eth.defaultAccount, 
+                    'chainId':  1337,
                     'to' : contract.address,
                     'gas' : w3.toHex(gas),
-                    'data' : data
+                    'data' : data,
+                    'gasPrice': w3.eth.gasPrice,
+                    'nonce': w3.eth.getTransactionCount(OWNER_ACCOUNT.address)
                     } 
     if privateFor:
         txParameters['privateFor'] = privateFor  # untested
-    
-    method = 'eth_sendTransaction'
-    payload= {"jsonrpc" : "2.0",
-               "method" : method,
-               "params" : [txParameters],
-               "id"     : 1}
+    signed_transaction = Web3.toHex(OWNER_ACCOUNT.signTransaction(txParameters).rawTransaction)
+    method = 'eth_sendRawTransaction'
+    payload = {
+        'jsonrpc': '2.0',
+        'method': method,
+        'params': [signed_transaction],
+        'id': 1337
+    }
+
+    # method = 'eth_sendTransaction'
+    # payload= {"jsonrpc" : "2.0",
+    #            "method" : method,
+    #            "params" : [txParameters],
+    #            "id"     : 1337}
     headers = {'Content-type' : 'application/json'}
     response = requests.post(RPCaddress, json=payload, headers=headers)
     # print('raw json response: {}'.format(response.json()))
@@ -382,6 +398,7 @@ def hasTxSucceeded(tx_receipt): #, gasGiven=GAS_FOR_SET_CALL):
 
 def receiptGetter(tx_hash, timeout, resultsDict):
     try:
+        print(tx_hash)
         resultsDict[tx_hash] = w3.eth.waitForTransactionReceipt(tx_hash, timeout)
     except web3.utils.threads.Timeout:
         pass
@@ -675,32 +692,36 @@ def sendmany(contract):
 
         
     print ("%d transaction hashes recorded, examples: %s" % (len(txs), txs[:2]))
-    
     return txs
 
 
 if __name__ == '__main__':
-    
     check_CLI_or_syntax_info_and_exit()
 
     global w3, NODENAME, NODETYPE, NODEVERSION, CONSENSUS, NETWORKID, CHAINNAME, CHAINID
     w3, chainInfos = web3connection(RPCaddress=RPCaddress, account=None)
     NODENAME, NODETYPE, NODEVERSION, CONSENSUS, NETWORKID, CHAINNAME, CHAINID = chainInfos
     
-    # wait_some_blocks(0); exit()
-    # timeit_argument_encoding(); exit()
-    # try_contract_set_via_web3(contract); exit()
-    # try_contract_set_via_RPC(contract);  exit()
-
-    w3.eth.defaultAccount = w3.eth.accounts[0] # set first account as sender
+    # # wait_some_blocks(0); exit()
+    # # timeit_argument_encoding(); exit()
+    # # try_contract_set_via_web3(contract); exit()
+    # # try_contract_set_via_RPC(contract);  exit()
+    
+    OWNER_ACCOUNT = w3.eth.account.privateKeyToAccount("0x12126974647d010ab7999fda600004e4fe0550000075343f1508f8c100000000")
+    w3.eth.defaultAccount = OWNER_ACCOUNT.address
+    # w3.eth.defaultAccount = w3.eth.accounts[0] # set first account as sender
     contract = initialize_fromAddress()
     txs = sendmany(contract)
     sys.stdout.flush() # so that the log files are updated.
 
-    success = controlSample_transactionsSuccessful(txs)
-    sys.stdout.flush()
+    print("transactions submitted are")
+    print(txs)
+    txs_hash =[trx.get('result') for trx in txs]
+    success = controlSample_transactionsSuccessful(txs_hash)
+    print("exited from the control check")
+    # sys.stdout.flush()
 
-    finish(txs, success)
-    sys.stdout.flush()
+    # finish(txs, success)
+    # sys.stdout.flush()
     
     
