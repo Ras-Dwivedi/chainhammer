@@ -20,9 +20,10 @@ import requests # pip3 install requests
 
 try:
     from web3 import Web3, HTTPProvider # pip3 install web3
-    from solc import compile_source # pip install py-solc
-except:
+    from solcx import compile_source # pip install py-solc
+except Exception as e:
     print ("Dependencies unavailable. Start virtualenv first!")
+    print(e)
     exit()
 
 
@@ -153,6 +154,8 @@ def trySmartContractMethods(myContract, gasForSetCall=GAS_FOR_SET_CALL):
 if __name__ == '__main__':
 
     global w3, NODENAME, NODETYPE, NODEVERSION, CONSENSUS, NETWORKID, CHAINNAME, CHAINID
+    print("inside main")
+    print(RPCaddress)
     w3, chainInfos = web3connection(RPCaddress=RPCaddress, account=None)
     NODENAME, NODETYPE, NODEVERSION, CONSENSUS, NETWORKID, CHAINNAME, CHAINID = chainInfos
 

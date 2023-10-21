@@ -36,16 +36,19 @@ from hammer.clienttype import clientType
 
 
 def printVersions():
-    import sys
-    from web3 import __version__ as web3version 
-    from solc import get_solc_version
-    from testrpc import __version__ as ethtestrpcversion
-    
-    import pkg_resources
-    pysolcversion = pkg_resources.get_distribution("py-solc").version
-    
-    print ("versions: web3 %s, py-solc: %s, solc %s, testrpc %s, python %s" % (web3version, pysolcversion, get_solc_version(), ethtestrpcversion, sys.version.replace("\n", "")))
-
+    try:
+        import sys
+        from web3 import __version__ as web3version 
+        from solc import get_solc_version
+        from testrpc import __version__ as ethtestrpcversion
+        
+        import pkg_resources
+        pysolcversion = pkg_resources.get_distribution("py-solc").version
+        
+        print ("versions: web3 %s, py-solc: %s, solc %s, testrpc %s, python %s" % (web3version, pysolcversion, get_solc_version(), ethtestrpcversion, sys.version.replace("\n", "")))
+    except Exception as e:
+        print(e)
+        # raise e
 
 ################################################################################
 # get a connection, and find out as much as possible

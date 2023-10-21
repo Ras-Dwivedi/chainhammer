@@ -14,8 +14,8 @@
 
 # better keep the same port :8545 everywhere, and instead
 # patch the docker-compose.yml files, see ../networks/quorum-configure.sh
-RPCaddress='http://0.0.0.0:22002'
-RPCaddress2='http://0.0.0.0:22001'
+RPCaddress='http://localhost:22001'
+RPCaddress2='http://localhost:22000'
 
 # RPCaddress='http://34.131.201.95:22000'
 # RPCaddress2='http://34.131.201.95:22000'

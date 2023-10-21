@@ -30,6 +30,11 @@ eval "$(pyenv virtualenv-init -)"
 ```
 Install matplotlib
 ```pip install matplotlib```
+```pip install py-solc
+```
+```pip install eth-testrpc
+```
+```sudo snap install solc```
 ### install all the dependencies
 ```pip install -r requirements.txt```
 
