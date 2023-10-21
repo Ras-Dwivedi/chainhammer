@@ -21,6 +21,7 @@ import sys, time, random, json
 from threading import Thread
 from queue import Queue
 from pprint import pprint
+import random
 
 # pypi:
 import requests # pip3 install requests
@@ -102,6 +103,7 @@ def contract_method_ID(methodname, abi):
     build the 4 byte ID, from abi & methodname
     """
     method_abi = filter_by_name(methodname, abi)
+    
     assert(len(method_abi)==1)
     method_abi = method_abi[0]
     method_signature = abi_to_signature(method_abi) 
@@ -110,11 +112,18 @@ def contract_method_ID(methodname, abi):
     method_signature_hash_4bytes = method_signature_hash_hex[0:10]
     return method_signature_hash_4bytes
 
+arg = {
+    "drcId": 0x3132330000000000000000000000000000000000000000000000000000000000,
+    "farAvailable": random.randint(1,10000),
+    "owner": "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4",
+    "tokenURI": "https://cloudflare-ipfs.com/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco/wiki/"
+}
 
-def argument_encoding(contract_method_ID, arg):
+def argument_encoding(contract_method_ID,arg ):
     """
     concatenate method ID + padded parameter
     """
+    print("===>> printting arg",   arg)
     arg_hex = w3.toHex(arg)
     arg_hex_padded = pad_hex ( arg_hex, bit_size=256)
     data = contract_method_ID + arg_hex_padded [2:]
@@ -126,10 +135,11 @@ def timeit_argument_encoding():
     test the above:
     'Doing that 10000 times ... took 0.45 seconds'
     """
+    print("==== inside timeit_argument_encoding ========")
     timer = time.clock()
     reps = 10000
     for i in range(reps):
-        method_ID = contract_method_ID("set", ABI)
+        method_ID = contract_method_ID("mintDRC", ABI)
         data = argument_encoding(method_ID, 7)
     timer = time.clock() - timer
     print (data)
@@ -146,13 +156,13 @@ def contract_set_via_RPC(contract, arg, hashes = None, privateFor=PRIVATE_FOR, g
     suggestion by @jpmsam 
     https://github.com/jpmorganchase/quorum/issues/346#issuecomment-382216968
     """
-    
-    method_ID = contract_method_ID("set", contract.abi) # TODO: make this "set" flexible for any method name
-    data = argument_encoding(method_ID, arg)
+    method_ID = contract_method_ID("mintDRC", contract.abi) # TODO: make this "set" flexible for any method name
+    data = argument_encoding(method_ID,arg)
     txParameters = {'from': w3.eth.defaultAccount, 
                     'to' : contract.address,
                     'gas' : w3.toHex(gas),
-                    'data' : data} 
+                    'data' : data
+                    } 
     if privateFor:
         txParameters['privateFor'] = privateFor  # untested
     
@@ -164,7 +174,7 @@ def contract_set_via_RPC(contract, arg, hashes = None, privateFor=PRIVATE_FOR, g
     headers = {'Content-type' : 'application/json'}
     response = requests.post(RPCaddress, json=payload, headers=headers)
     # print('raw json response: {}'.format(response.json()))
-    tx = response.json()['result']
+    tx = response.json()
         
     # print ("[sent directly via RPC]", end=" ") # TODO: not print this here but at start
     print (".", end=" ") # TODO: not print this here but at start
@@ -173,7 +183,6 @@ def contract_set_via_RPC(contract, arg, hashes = None, privateFor=PRIVATE_FOR, g
         hashes.append(tx)
     return tx
 
-
 def try_contract_set_via_RPC(contract, steps=3):
     """
     test the above, write 3 transactions, and check the storedData
@@ -181,7 +190,7 @@ def try_contract_set_via_RPC(contract, steps=3):
     rand = random.randint(1, 100)
     for number in range(rand, rand+steps):
         tx = contract_set_via_RPC(contract, number)
-        print ("after setat(%d) tx" % number, tx, " the storedData now is", end=" ")
+        print ("after set at(%d) tx" % number, tx, " the storedData now is", end=" ")
         # TODO: wait for receipt!
         storedData = contract.functions.get().call()
         print (storedData) 
@@ -190,6 +199,9 @@ def try_contract_set_via_RPC(contract, steps=3):
     
 # CHOOSE which route to choose (web3 / RPC) depending on constant ROUTE
 contract_set = contract_set_via_web3   if ROUTE=="web3" else contract_set_via_RPC
+
+
+
 
 
 ################################################################
@@ -212,7 +224,7 @@ def many_transactions_consecutive(contract, numTx):
     txs = []
     for i in range(numTx):
         tx = contract_set(contract, i)
-        print ("set() transaction submitted: ", tx) # Web3.toHex(tx)) # new web3
+        print (" transaction submitted: ", tx) # Web3.toHex(tx)) # new web3
         txs.append(tx)
     return txs
         
@@ -249,7 +261,7 @@ def many_transactions_threaded(contract, numTx):
     
     return txs
 
-def many_transactions_threaded_Queue(contract, numTx, num_worker_threads=25):
+def many_transactions_threaded_Queue(contract, numTx, num_worker_threads=100):
     """
     submit many transactions multi-threaded, 
     with size limited threading Queue
@@ -340,7 +352,6 @@ def many_transactions_threaded_in_batches(contract, numTx, batchSize=25):
 
 
 def hasTxSucceeded(tx_receipt): #, gasGiven=GAS_FOR_SET_CALL):
-    
     # txReceipt.status or None
     status = tx_receipt.get("status", None) 
     if status == 1:  # clear answer = transaction succeeded!
@@ -411,7 +422,7 @@ def controlSample_transactionsSuccessful(txs, sampleSize=50, timeout=100):
     * tx_receipt.status == 0 for any of the sampled transactions. Real tx failure!
     * all given gas used up. It's only an indirect indicator for a failed transaction.
     """
-    
+    print("==== inside Check control sample ========")
     print ("Check control sample.")
     N = sampleSize if len(txs)>sampleSize else len(txs) 
     txs_sample = random.sample(txs, N)
@@ -683,7 +694,6 @@ if __name__ == '__main__':
 
     w3.eth.defaultAccount = w3.eth.accounts[0] # set first account as sender
     contract = initialize_fromAddress()
-
     txs = sendmany(contract)
     sys.stdout.flush() # so that the log files are updated.
 
