@@ -7,10 +7,12 @@
 @author:  https://github.com/drandreaskrueger
 @see:     https://github.com/drandreaskrueger/chainhammer for updates
 """
+import secrets
 
 # extend sys.path for imports:
 if __name__ == '__main__' and __package__ is None:
     from os import sys, path
+
     sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 ################
@@ -24,11 +26,11 @@ from pprint import pprint
 import random
 
 # pypi:
-import requests # pip3 install requests
+import requests  # pip3 install requests
 import web3
-from web3 import Web3, HTTPProvider # pip3 install web3
-from web3.utils.abi import filter_by_name, abi_to_signature
-from web3.utils.encoding import pad_hex
+from web3 import Web3, HTTPProvider  # pip3 install web3
+# from web3.utils.abi import filter_by_name, abi_to_signature
+# from web3.utils.encoding import pad_hex
 
 # chainhammer:
 from hammer.config import RPCaddress, ROUTE, PRIVATE_FOR, EXAMPLE_ABI
@@ -37,6 +39,33 @@ from hammer.config import GAS_FOR_SET_CALL
 from hammer.config import FILE_LAST_EXPERIMENT, EMPTY_BLOCKS_AT_END
 from hammer.deploy import loadFromDisk
 from hammer.clienttools import web3connection, unlockAccount
+
+
+def filter_by_name(function_name, contract_abi):
+    filtered_abi = [entry for entry in contract_abi if entry.get("name") == function_name]
+    return filtered_abi
+
+
+def abi_to_signature(abi):
+    # return Web3.sha3(text=abi["name"] + "(" + ",".join([param["type"] for param in abi["inputs"]]) + ")").hex()[:10]
+    return w3.keccak(text=abi["name"] + "(" + ",".join([param["type"] for param in abi["inputs"]]) + ")").hex()[:10]
+
+# def abi_to_signature(abi):
+#     function_name = abi['name']
+#     function_parameters = abi['inputs']
+#
+#     # Encode the function signature
+#     function_signature = w3.codec.encode(function_name, function_parameters)
+#     print("function signature is ",function_signature)
+#     return function_signature
+def pad_hex(value, bit_size):
+    """
+    Pad a hex value to the specified bit size.
+    """
+    value_hex = value[2:]  # Remove the '0x' prefix
+    while len(value_hex) < bit_size // 4:  # Divide by 4 to get the number of hex characters
+        value_hex = '0' + value_hex
+    return '0x' + value_hex
 
 
 ##########################
@@ -51,29 +80,29 @@ def initialize_fromAddress():
     myContract = w3.eth.contract(address=contractAddress,
                                  abi=abi)
     return myContract
-    
 
-def contract_set_via_web3(contract, arg, hashes = None, privateFor=PRIVATE_FOR, gas=GAS_FOR_SET_CALL):
+
+def contract_set_via_web3(contract, arg, hashes=None, privateFor=PRIVATE_FOR, gas=GAS_FOR_SET_CALL):
     """
     call the .set(arg) method, possibly with 'privateFor' tx-property
     using the web3 method 
     """
     txParameters = {'from': w3.eth.defaultAccount,
-                    'gas' : gas}
+                    'gas': gas}
     if privateFor:
         txParameters['privateFor'] = privateFor  # untested
-        
+
     # pprint (txParameters)
-    
+
     if PARITY_UNLOCK_EACH_TRANSACTION:
         unlockAccount()
-        
-    tx = contract.functions.set( x=arg ).transact(txParameters)
+
+    tx = contract.functions.set(x=arg).transact(txParameters)
     # print ("[sent via web3]", end=" ")  # TODO: not print this here but at start
-    print (".", end=" ")  # TODO: not print this here but at start
+    print(".", end=" ")  # TODO: not print this here but at start
     tx = w3.toHex(tx)
-    
-    if not hashes==None:
+
+    if not hashes == None:
         hashes.append(tx)
     return tx
 
@@ -83,10 +112,10 @@ def try_contract_set_via_web3(contract, arg=42):
     test the above
     """
     tx = contract_set_via_web3(contract, arg=arg)
-    print (tx)
+    print(tx)
     tx_receipt = w3.eth.waitForTransactionReceipt(tx)
     storedData = contract.functions.get().call()
-    print (storedData) 
+    print(storedData)
     return storedData
 
 
@@ -103,33 +132,37 @@ def contract_method_ID(methodname, abi):
     build the 4 byte ID, from abi & methodname
     """
     method_abi = filter_by_name(methodname, abi)
-    
-    assert(len(method_abi)==1)
+
+    assert (len(method_abi) == 1)
     method_abi = method_abi[0]
-    method_signature = abi_to_signature(method_abi) 
-    method_signature_hash_bytes = w3.sha3(text=method_signature) 
-    method_signature_hash_hex = w3.toHex(method_signature_hash_bytes)
+    method_signature = abi_to_signature(method_abi)
+    method_signature_hash_bytes = w3.keccak(text=method_signature)
+    print(method_signature_hash_bytes)
+    method_signature_hash_hex = w3.to_hex(method_signature_hash_bytes)
     method_signature_hash_4bytes = method_signature_hash_hex[0:10]
+    # method_signature_hash_4bytes = method_signature_hash_bytes[0:10]
     return method_signature_hash_4bytes
+
 
 arg = {
     "drcId": 0x3132330000000000000000000000000000000000000000000000000000000000,
-    "farAvailable": random.randint(1,10000),
+    "farAvailable": random.randint(1, 10000),
     "owner": "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4",
     "tokenURI": "https://cloudflare-ipfs.com/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco/wiki/"
 }
 
-def argument_encoding(contract_method_ID,arg ):
+
+def argument_encoding(contract_method_ID, arg):
     """
     concatenate method ID + padded parameter
     """
-    print("===>> printting arg",   arg)
-    arg_hex = w3.toHex(arg)
-    arg_hex_padded = pad_hex ( arg_hex, bit_size=256)
-    data = contract_method_ID + arg_hex_padded [2:]
+    print("===>> printting arg", arg)
+    arg_hex = w3.to_hex(arg)
+    arg_hex_padded = pad_hex(arg_hex, bit_size=256)
+    data = contract_method_ID + arg_hex_padded[2:]
     return data
-    
-    
+
+
 def timeit_argument_encoding():
     """
     test the above:
@@ -142,12 +175,12 @@ def timeit_argument_encoding():
         method_ID = contract_method_ID("mintDRC", ABI)
         data = argument_encoding(method_ID, 7)
     timer = time.clock() - timer
-    print (data)
+    print(data)
     # no need to precalculate, it takes near to no time:
-    print ("Doing that %d times ... took %.2f seconds" % (reps, timer) )
+    print("Doing that %d times ... took %.2f seconds" % (reps, timer))
 
 
-def contract_set_via_RPC(contract, arg, hashes = None, privateFor=PRIVATE_FOR, gas=GAS_FOR_SET_CALL):
+def contract_set_via_RPC(contract, arg, hashes=None, privateFor=PRIVATE_FOR, gas=GAS_FOR_SET_CALL):
     """
     call the .set(arg) method numTx=10
     not going through web3
@@ -156,52 +189,51 @@ def contract_set_via_RPC(contract, arg, hashes = None, privateFor=PRIVATE_FOR, g
     suggestion by @jpmsam 
     https://github.com/jpmorganchase/quorum/issues/346#issuecomment-382216968
     """
-    method_ID = contract_method_ID("mintDRC", contract.abi) # TODO: make this "set" flexible for any method name
-    data = argument_encoding(method_ID,arg)
-    txParameters = {'from': w3.eth.defaultAccount, 
-                    'to' : contract.address,
-                    'gas' : w3.toHex(gas),
-                    'data' : data
-                    } 
+    method_ID = contract_method_ID("mintDRC", contract.abi)  # TODO: make this "set" flexible for any method name
+    data = argument_encoding(method_ID, arg)
+    txParameters = {'from': w3.eth.defaultAccount,
+                    'to': contract.address,
+                    'gas': w3.to_hex(gas),
+                    'data': data
+                    }
+    print(txParameters)
     if privateFor:
         txParameters['privateFor'] = privateFor  # untested
-    
+
     method = 'eth_sendTransaction'
-    payload= {"jsonrpc" : "2.0",
-               "method" : method,
-               "params" : [txParameters],
-               "id"     : 1}
-    headers = {'Content-type' : 'application/json'}
+    payload = {"jsonrpc": "2.0",
+               "method": method,
+               "params": [txParameters],
+               "id": 1}
+    headers = {'Content-type': 'application/json'}
     response = requests.post(RPCaddress, json=payload, headers=headers)
     # print('raw json response: {}'.format(response.json()))
     tx = response.json()
-        
+
     # print ("[sent directly via RPC]", end=" ") # TODO: not print this here but at start
-    print (".", end=" ") # TODO: not print this here but at start
-    
-    if not hashes==None:
+    print(".", end=" ")  # TODO: not print this here but at start
+
+    if not hashes == None:
         hashes.append(tx)
     return tx
+
 
 def try_contract_set_via_RPC(contract, steps=3):
     """
     test the above, write 3 transactions, and check the storedData
     """
     rand = random.randint(1, 100)
-    for number in range(rand, rand+steps):
+    for number in range(rand, rand + steps):
         tx = contract_set_via_RPC(contract, number)
-        print ("after set at(%d) tx" % number, tx, " the storedData now is", end=" ")
+        print("after set at(%d) tx" % number, tx, " the storedData now is", end=" ")
         # TODO: wait for receipt!
         storedData = contract.functions.get().call()
-        print (storedData) 
-    
-    
-    
-# CHOOSE which route to choose (web3 / RPC) depending on constant ROUTE
-contract_set = contract_set_via_web3   if ROUTE=="web3" else contract_set_via_RPC
+        print(storedData)
+
+    # CHOOSE which route to choose (web3 / RPC) depending on constant ROUTE
 
 
-
+contract_set = contract_set_via_web3 if ROUTE == "web3" else contract_set_via_RPC
 
 
 ################################################################
@@ -220,14 +252,15 @@ def many_transactions_consecutive(contract, numTx):
     """
     naive approach, blocking --> 15 TPS
     """
-    print ("send %d transactions, non-async, one after the other:\n" % (numTx))
+    print("send %d transactions, non-async, one after the other:\n" % (numTx))
     txs = []
     for i in range(numTx):
         tx = contract_set(contract, i)
-        print (" transaction submitted: ", tx) # Web3.toHex(tx)) # new web3
+        print(" transaction submitted: ", tx)  # Web3.toHex(tx)) # new web3
         txs.append(tx)
+    print(txs)
+    exit(0)
     return txs
-        
 
 
 def many_transactions_threaded(contract, numTx):
@@ -237,29 +270,30 @@ def many_transactions_threaded(contract, numTx):
     N.B.: 1 thread / transaction 
           --> machine can run out of threads, then crash
     """
-    
-    print ("send %d transactions, multi-threaded, one thread per tx:\n" % (numTx))
+
+    print("send %d transactions, multi-threaded, one thread per tx:\n" % (numTx))
 
     threads = []
-    txs = [] # container to keep all transaction hashes
+    txs = []  # container to keep all transaction hashes
     for i in range(numTx):
-        t = Thread(target = contract_set,
-                   args   = (contract, i, txs))
+        t = Thread(target=contract_set,
+                   args=(contract, i, txs))
         threads.append(t)
-        print (".", end="")
-    print ("%d transaction threads created." % len(threads))
+        print(".", end="")
+    print("%d transaction threads created." % len(threads))
 
     for t in threads:
         t.start()
-        print (".", end="")
+        print(".", end="")
         sys.stdout.flush()
-    print ("all threads started.")
-    
-    for t in threads: 
+    print("all threads started.")
+
+    for t in threads:
         t.join()
-    print ("all threads ended.")
-    
+    print("all threads ended.")
+
     return txs
+
 
 def many_transactions_threaded_Queue(contract, numTx, num_worker_threads=100):
     """
@@ -268,33 +302,36 @@ def many_transactions_threaded_Queue(contract, numTx, num_worker_threads=100):
     """
 
     line = "send %d transactions, via multi-threading queue with %d workers:\n"
-    print (line % (numTx, num_worker_threads))
+    print(line % (numTx, num_worker_threads))
 
     q = Queue()
-    txs = [] # container to keep all transaction hashes
-    
+    txs = []  # container to keep all transaction hashes
+
     def worker():
         while True:
             item = q.get()
             contract_set(contract, item, txs)
-            print ("T", end=""); sys.stdout.flush()
+            print("T", end="");
+            sys.stdout.flush()
             q.task_done()
 
     for i in range(num_worker_threads):
-         t = Thread(target=worker)
-         t.daemon = True
-         t.start()
-         print ("W", end=""); sys.stdout.flush()
-    print ("\n%d worker threads created." % num_worker_threads)
+        t = Thread(target=worker)
+        t.daemon = True
+        t.start()
+        print("W", end="");
+        sys.stdout.flush()
+    print("\n%d worker threads created." % num_worker_threads)
 
     for i in range(numTx):
-        q.put (i)
-        print ("I", end=""); sys.stdout.flush()
-    print ("\n%d items queued." % numTx)
+        q.put(i)
+        print("I", end="");
+        sys.stdout.flush()
+    print("\n%d items queued." % numTx)
 
     q.join()
-    print ("\nall items - done.")
-    
+    print("\nall items - done.")
+
     return txs
 
 
@@ -308,39 +345,39 @@ def many_transactions_threaded_in_batches(contract, numTx, batchSize=25):
 
     line = "send %d transactions, multi-threaded, one thread per tx, " \
            "in batches of %d parallel threads:\n"
-    print (line % (numTx, batchSize))
-    
-    txs = [] # container to keep all transaction hashes
-    
-    howManyLeft=numTx
-    while howManyLeft>0:
-    
-        line = "Next batch of %d transactions ... %d left to do"    
-        print (line % (batchSize, howManyLeft))
-        
+    print(line % (numTx, batchSize))
+
+    txs = []  # container to keep all transaction hashes
+
+    howManyLeft = numTx
+    while howManyLeft > 0:
+
+        line = "Next batch of %d transactions ... %d left to do"
+        print(line % (batchSize, howManyLeft))
+
         threads = []
-        
-        number = batchSize if howManyLeft>batchSize else howManyLeft 
-        
+
+        number = batchSize if howManyLeft > batchSize else howManyLeft
+
         for i in range(number):
-            t = Thread(target = contract_set,
-                       args   = (contract, i, txs))
+            t = Thread(target=contract_set,
+                       args=(contract, i, txs))
             threads.append(t)
-            print (".", end="")
-        print ("\n%d transaction threads created." % len(threads))
-    
+            print(".", end="")
+        print("\n%d transaction threads created." % len(threads))
+
         for t in threads:
             t.start()
-            print (".", end="")
+            print(".", end="")
             sys.stdout.flush()
-        print ("\nall threads started.")
-        
-        for t in threads: 
+        print("\nall threads started.")
+
+        for t in threads:
             t.join()
-        print ("\nall threads ended.")
+        print("\nall threads ended.")
 
         howManyLeft -= number
-        
+
     return txs
 
 
@@ -351,60 +388,63 @@ def many_transactions_threaded_in_batches(contract, numTx, batchSize=25):
 ################################################################
 
 
-def hasTxSucceeded(tx_receipt): #, gasGiven=GAS_FOR_SET_CALL):
+def hasTxSucceeded(tx_receipt):  # , gasGiven=GAS_FOR_SET_CALL):
     # txReceipt.status or None
-    status = tx_receipt.get("status", None) 
+    status = tx_receipt.get("status", None)
     if status == 1:  # clear answer = transaction succeeded!
         return True
     if status == 0:  # clear answer = transaction failed!
         return False
 
     # unfortunately not all clients support status field yet (e.g. testrpc-py, quorum)
-     
+
     # second way is to compare gasGiven with gasUsed:
-    tx_hash=tx_receipt.transactionHash
+    tx_hash = tx_receipt.transactionHash
     gasGiven = w3.eth.getTransaction(tx_hash)["gas"]
     gasLeftOver = tx_receipt.gasUsed < gasGiven
-    
+
     if not gasLeftOver:
         # many types of transaction failures result in all given gas being used up
         # e.g. a failed assert() in solidity leads to all gas used up
         # Then it's clear = transaction failed!
-        return False 
-    
+        return False
+
     if gasLeftOver:
         # THIS is the dangerous case, because 
         # e.g. solidity throw / revert() / require() are also returning some unused gas!
         # As well as SUCCESSFUL transactions are returning some gas!
         # But for clients without the status field, this is the only indicator, so:
         return True
-    
+
 
 def receiptGetter(tx_hash, timeout, resultsDict):
     try:
-        resultsDict[tx_hash] = w3.eth.waitForTransactionReceipt(tx_hash, timeout)
+        print("here is the trx hash")
+        print(tx_hash, timeout, resultsDict)
+        print("--------------------------------")
+        resultsDict[tx_hash] = w3.eth.wait_for_transaction_receipt(tx_hash, timeout)
     except web3.utils.threads.Timeout:
         pass
-        
-            
+
+
 def getReceipts_multithreaded(tx_hashes, timeout):
     """
     one thread per tx_hash
     """
-    
+
     tx_receipts = {}
     print("Waiting for %d transaction receipts, can possibly take a while ..." % len(tx_hashes))
-    threads = []    
+    threads = []
     for tx_hash in tx_hashes:
-        t = Thread(target = receiptGetter,
-                   args   = (tx_hash, timeout, tx_receipts))
+        t = Thread(target=receiptGetter,
+                   args=(tx_hash, timeout, tx_receipts))
         threads.append(t)
         t.start()
-    
+
     # wait for all of them coming back:
-    for t in threads: 
+    for t in threads:
         t.join()
-    
+
     return tx_receipts
 
 
@@ -423,38 +463,38 @@ def controlSample_transactionsSuccessful(txs, sampleSize=50, timeout=100):
     * all given gas used up. It's only an indirect indicator for a failed transaction.
     """
     print("==== inside Check control sample ========")
-    print ("Check control sample.")
-    N = sampleSize if len(txs)>sampleSize else len(txs) 
+    print("Check control sample.")
+    N = sampleSize if len(txs) > sampleSize else len(txs)
     txs_sample = random.sample(txs, N)
-    
-    tx_receipts = getReceipts_multithreaded(tx_hashes=txs_sample, timeout=timeout) 
-    
+
+    tx_receipts = getReceipts_multithreaded(tx_hashes=txs_sample, timeout=timeout)
+
     # Test 1: Are all receipts here?    
     M = len(tx_receipts)
     if M != N:
-        print ("Bad: Timeout, received receipts only for %d out of %d sampled transactions." % (M, N))
-        success = False 
+        print("Bad: Timeout, received receipts only for %d out of %d sampled transactions." % (M, N))
+        success = False
     else:
-        print ("Good: No timeout, received the receipts for all %d sampled transactions." % N)
+        print("Good: No timeout, received the receipts for all %d sampled transactions." % N)
         success = True
-            
+
     # Test 2: Was each an every transaction successful?
-    badCounter=0
+    badCounter = 0
     for tx_hash, tx_receipt in tx_receipts.items():
         # status = tx_receipt.get("status", None) # unfortunately not all clients support this yet
         # print ((tx_hash, status, tx_receipt.gasUsed ))
         if not hasTxSucceeded(tx_receipt):
             success = False
-            print ("Transaction NOT successful:", tx_hash, tx_receipt)
-            badCounter = badCounter+1 
-    # pprint (dict(tx_receipt))
+            print("Transaction NOT successful:", tx_hash, tx_receipt)
+            badCounter = badCounter + 1
+            # pprint (dict(tx_receipt))
 
     if badCounter:
-        print ("Bad: %d out of %d not successful!" % (badCounter, M))
-        
-    print ("Sample of %d transactions checked ... hints at:" % M, end=" ")
-    print( "TOTAL SUCCESS :-)" if success else "-AT LEAST PARTIAL- FAILURE :-(" )
-    
+        print("Bad: %d out of %d not successful!" % (badCounter, M))
+
+    print("Sample of %d transactions checked ... hints at:" % M, end=" ")
+    print("TOTAL SUCCESS :-)" if success else "-AT LEAST PARTIAL- FAILURE :-(")
+
     return success
 
 
@@ -475,11 +515,11 @@ def getReceipts_multithreaded_Queue(tx_hashes, timeout, num_worker_threads=8, if
     Advantage over 'getReceipts_multithreaded': 
                        Will also work for len(tx_hashes) > 1000 
     """
-    
-    start=time.monotonic()
+
+    start = time.monotonic()
     q = Queue()
     tx_receipts = {}
-    
+
     def worker():
         while True:
             tx_hash = q.get()
@@ -487,19 +527,19 @@ def getReceipts_multithreaded_Queue(tx_hashes, timeout, num_worker_threads=8, if
             q.task_done()
 
     for i in range(num_worker_threads):
-         t = Thread(target=worker)
-         t.daemon = True
-         t.start()
+        t = Thread(target=worker)
+        t.daemon = True
+        t.start()
 
     for tx in tx_hashes:
-        q.put (tx)
+        q.put(tx)
 
     q.join()
-    
+
     if ifPrint:
         duration = time.monotonic() - start
-        print ("%d lookups took %.1f seconds" % (len(tx_receipts), duration))
-    
+        print("%d lookups took %.1f seconds" % (len(tx_receipts), duration))
+
     return tx_receipts
 
 
@@ -512,24 +552,24 @@ def when_last_ones_mined__give_range_of_block_numbers(txs, txRangesSize=100, tim
     """
 
     txs_begin_and_end = txs[:txRangesSize] + txs[-txRangesSize:]
-    tx_receipts = getReceipts_multithreaded_Queue(tx_hashes=txs_begin_and_end, 
-                                                  timeout=timeout) #, ifPrint=True)
-    
+    tx_receipts = getReceipts_multithreaded_Queue(tx_hashes=txs_begin_and_end,
+                                                  timeout=timeout)  # , ifPrint=True)
+
     # or actually, all of them? Naaa, too slow:
     #   TestRPC: 2000 lookups took 122.1 seconds
     #    Parity: 2000 lookups took 7.2 seconds
     #      Geth: 2000 lookups took 8.6 seconds
     # tx_receipts = getReceipts_multithreaded_Queue(tx_hashes=txs, 
     #                                              timeout=timeout, ifPrint=True)
-    
+
     blockNumbers = [receipt.blockNumber for receipt in tx_receipts.values()]
-    blockNumbers = sorted(list(set(blockNumbers))) # make unique
+    blockNumbers = sorted(list(set(blockNumbers)))  # make unique
     # print (blockNumbers) 
     return min(blockNumbers), max(blockNumbers)
 
-    
-def store_experiment_data(success, num_txs, 
-                          block_from, block_to, 
+
+def store_experiment_data(success, num_txs,
+                          block_from, block_to,
                           empty_blocks,
                           filename=FILE_LAST_EXPERIMENT):
     """
@@ -537,29 +577,29 @@ def store_experiment_data(success, num_txs,
     stored in same (overwritten) file.
     Purpose: diagramming should be able to calc proper averages & select ranges
     """
-    data = {"send" : {
-                "block_first" : block_from,
-                "block_last": block_to,
-                "empty_blocks": empty_blocks, 
-                "num_txs" : num_txs,
-                "sample_txs_successful": success
-                },
-            "node" : {
-                "rpc_address": RPCaddress,
-                "web3.version.node": w3.version.node,
-                "name" : NODENAME,
-                "type" : NODETYPE,
-                "version" : NODEVERSION, 
-                "consensus" : CONSENSUS, 
-                "network_id" : NETWORKID, 
-                "chain_name" : CHAINNAME, 
-                "chain_id" : CHAINID
-                }
-            }
-            
+    data = {"send": {
+        "block_first": block_from,
+        "block_last": block_to,
+        "empty_blocks": empty_blocks,
+        "num_txs": num_txs,
+        "sample_txs_successful": success
+    },
+        "node": {
+            "rpc_address": RPCaddress,
+            "web3.version.node": w3.version.node,
+            "name": NODENAME,
+            "type": NODETYPE,
+            "version": NODEVERSION,
+            "consensus": CONSENSUS,
+            "network_id": NETWORKID,
+            "chain_name": CHAINNAME,
+            "chain_id": CHAINID
+        }
+    }
+
     with open(filename, "w") as f:
         json.dump(data, f)
-    
+
 
 def wait_some_blocks(waitBlocks=EMPTY_BLOCKS_AT_END, pauseBetweenQueries=0.3):
     """
@@ -568,39 +608,40 @@ def wait_some_blocks(waitBlocks=EMPTY_BLOCKS_AT_END, pauseBetweenQueries=0.3):
     So when ./send.py ends, the analysis can happen.
     """
     blockNumber_start = w3.eth.blockNumber
-    print ("blocknumber now:", blockNumber_start, end=" ")
-    print ("waiting for %d empty blocks:" % waitBlocks)
-    bn_previous=bn_now=blockNumber_start
-    
+    print("blocknumber now:", blockNumber_start, end=" ")
+    print("waiting for %d empty blocks:" % waitBlocks)
+    bn_previous = bn_now = blockNumber_start
+
     while bn_now < waitBlocks + blockNumber_start:
         time.sleep(pauseBetweenQueries)
-        bn_now=w3.eth.blockNumber
+        bn_now = w3.eth.blockNumber
         # print (bn_now, waitBlocks + blockNumber_start)
-        if bn_now!=bn_previous:
-            bn_previous=bn_now
-            print (bn_now, end=" "); sys.stdout.flush()
-         
-    print ("Done.")
+        if bn_now != bn_previous:
+            bn_previous = bn_now
+            print(bn_now, end=" ");
+            sys.stdout.flush()
 
-        
+    print("Done.")
+
+
 def finish(txs, success):
     block_from, block_to = when_last_ones_mined__give_range_of_block_numbers(txs)
     txt = "Transaction receipts from beginning and end all arrived. Blockrange %d to %d."
     txt = txt % (block_from, block_to)
-    print (txt)
-    
-    if NODETYPE=="TestRPC" or (NODENAME=="Parity" and CHAINNAME=="developmentchain" and NETWORKID==17):
-        print ("Do not wait for empty blocks, as this is TestRPC, or parity instantseal.")
-        waitBlocks=0
+    print(txt)
+
+    if NODETYPE == "TestRPC" or (NODENAME == "Parity" and CHAINNAME == "developmentchain" and NETWORKID == 17):
+        print("Do not wait for empty blocks, as this is TestRPC, or parity instantseal.")
+        waitBlocks = 0
     else:
-        waitBlocks=EMPTY_BLOCKS_AT_END
+        waitBlocks = EMPTY_BLOCKS_AT_END
         wait_some_blocks(waitBlocks)
-    
-    store_experiment_data (success, len(txs), block_from, block_to, empty_blocks=waitBlocks)
+
+    store_experiment_data(success, len(txs), block_from, block_to, empty_blocks=waitBlocks)
     # print ("Data stored. This will trigger tps.py to end in ~ %d blocks." % EMPTY_BLOCKS_AT_END)
-    
-    print ("Data stored. This will trigger tps.py to end.\n"
-           "(Beware: Wait ~0.5s until tps.py stops and writes to same file.)")
+
+    print("Data stored. This will trigger tps.py to end.\n"
+          "(Beware: Wait ~0.5s until tps.py stops and writes to same file.)")
     #          see tps.py --> pauseBetweenQueries=0.3
 
 
@@ -614,14 +655,14 @@ def check_CLI_or_syntax_info_and_exit():
     """
     before anything, check if number of parameters is fine, or print syntax instructions
     """
-    
-    #print ("len(sys.argv)=", len(sys.argv))
-    
+
+    # print ("len(sys.argv)=", len(sys.argv))
+
     if not (2 <= len(sys.argv) <= 4):
-        print ("Needs parameters:")
-        print ("%s numTransactions algorithm [workers]" % sys.argv[0])
-        print ("at least numTransactions, e.g.")
-        print ("%s 1000" % sys.argv[0])
+        print("Needs parameters:")
+        print("%s numTransactions algorithm [workers]" % sys.argv[0])
+        print("at least numTransactions, e.g.")
+        print("%s 1000" % sys.argv[0])
         exit()
 
 
@@ -634,73 +675,82 @@ def sendmany(contract):
 
     # TODO: Perhaps extend this to a full blown (config.py) settings printer?
     # but then in tps.py because only that output is visible in run.sh
-    print("\nCurrent blockNumber = ", w3.eth.blockNumber)
+    print("\nCurrent blockNumber = ", w3.eth.block_number)
     numTransactions = int(sys.argv[1])
-    if ROUTE=="RPC": route = "RPC directly" 
-    if ROUTE=="web3": route = "web3 library" 
-    print ("You want me to send %d transactions, via route: %s." % (numTransactions, route))
-    
+    if ROUTE == "RPC": route = "RPC directly"
+    if ROUTE == "web3": route = "web3 library"
+    print("You want me to send %d transactions, via route: %s." % (numTransactions, route))
+
     # choose algorithm depending on 2nd CLI argument:
-    
-    if len(sys.argv)==2 or sys.argv[2]=="sequential":
-        
+
+    if len(sys.argv) == 2 or sys.argv[2] == "sequential":
+
         # blocking, non-async
-        txs=many_transactions_consecutive(contract, numTransactions)  
-        
-    elif sys.argv[2]=="threaded1":
-        txs=many_transactions_threaded(contract, numTransactions)
-            
-            
-    elif sys.argv[2]=="threaded2":
+        txs = many_transactions_consecutive(contract, numTransactions)
+
+    elif sys.argv[2] == "threaded1":
+        txs = many_transactions_threaded(contract, numTransactions)
+
+
+    elif sys.argv[2] == "threaded2":
         num_workers = 100
-        if len(sys.argv)==4:
+        if len(sys.argv) == 4:
             try:
                 num_workers = int(sys.argv[3])
             except:
                 pass
-            
-        txs=many_transactions_threaded_Queue(contract, 
-                                         numTx=numTransactions, 
-                                         num_worker_threads=num_workers)
-        
-    elif sys.argv[2]=="threaded3":
-        batchSize=25
-        txs=many_transactions_threaded_in_batches(contract, 
-                                              numTx=numTransactions, 
-                                              batchSize=batchSize)
-          
+
+        txs = many_transactions_threaded_Queue(contract,
+                                               numTx=numTransactions,
+                                               num_worker_threads=num_workers)
+
+    elif sys.argv[2] == "threaded3":
+        batchSize = 25
+        txs = many_transactions_threaded_in_batches(contract,
+                                                    numTx=numTransactions,
+                                                    batchSize=batchSize)
+
     else:
-        print ("Nope. Choice '%s'" % sys.argv[2], "not recognized.")
+        print("Nope. Choice '%s'" % sys.argv[2], "not recognized.")
         exit()
 
-        
-    print ("%d transaction hashes recorded, examples: %s" % (len(txs), txs[:2]))
-    
+    print("%d transaction hashes recorded, examples: %s" % (len(txs), txs[:2]))
+
     return txs
 
 
 if __name__ == '__main__':
-    
     check_CLI_or_syntax_info_and_exit()
-
+    #
     global w3, NODENAME, NODETYPE, NODEVERSION, CONSENSUS, NETWORKID, CHAINNAME, CHAINID
     w3, chainInfos = web3connection(RPCaddress=RPCaddress, account=None)
     NODENAME, NODETYPE, NODEVERSION, CONSENSUS, NETWORKID, CHAINNAME, CHAINID = chainInfos
-    
+
     # wait_some_blocks(0); exit()
     # timeit_argument_encoding(); exit()
     # try_contract_set_via_web3(contract); exit()
     # try_contract_set_via_RPC(contract);  exit()
+    # Create the account and then unclock it and send the private key to the remote geth node
+    private_key = '0x7b3dd08fe89505e2323d8262582f9b6f344b10a3dfd405a1b3b1937b941bb1e9'
+    # private_key = secrets.token_hex(32)
+    # print(private_key)
+    password = "12345566"
+    OWNER_ACCOUNT = w3.eth.account.from_key(private_key)
+    w3.eth.defaultAccount = OWNER_ACCOUNT.address
 
-    w3.eth.defaultAccount = w3.eth.accounts[0] # set first account as sender
+    #When creating first time
+    # OWNER_ACCOUNT = w3.eth.account.create(private_key)
+    # w3.eth.defaultAccount = OWNER_ACCOUNT.address
+    # w3.geth.personal.import_raw_key(private_key, password)
+    #w3.geth.personal.lock_account(address)
+
+    w3.geth.personal.unlock_account(w3.eth.defaultAccount,password)
     contract = initialize_fromAddress()
     txs = sendmany(contract)
-    sys.stdout.flush() # so that the log files are updated.
+    sys.stdout.flush()  # so that the log files are updated.
 
     success = controlSample_transactionsSuccessful(txs)
     sys.stdout.flush()
 
     finish(txs, success)
     sys.stdout.flush()
-    
-    
