@@ -17,9 +17,12 @@ import os
 from pprint import pprint
 
 try:
-    from web3 import Web3, HTTPProvider # pip3 install web3
-except:
+    from web3 import Web3, HTTPProvider  # pip3 install web3
+    # from web3.providers.eth_tester import TestRPCProvider
+
+except Exception as e:
     print ("Dependencies unavailable. Start virtualenv first!")
+    print(e)
     exit()
 
 # extend sys.path for imports:
@@ -59,22 +62,25 @@ def start_web3connection(RPCaddress=None, account=None):
     get a web3 object, and make it global 
     """
     global w3
+
     if RPCaddress:
-        # HTTP provider 
+        # HTTP provider
         # (TODO: also try whether IPC provider is faster, when quorum-outside-vagrant starts working)
         w3 = Web3(HTTPProvider(RPCaddress, request_kwargs={'timeout': 120}))
     else:
         # w3 = Web3(Web3.EthereumTesterProvider()) # does NOT work!
-        w3 = Web3(Web3.TestRPCProvider()) 
-    
-    print ("web3 connection established, blockNumber =", w3.eth.blockNumber, end=", ")
-    print ("node version string = ", w3.version.node)
+        w3 = Web3(Web3.TestRPCProvider())
+
+    # w3 = Web3(TestRPCProvider()) # does NOT work!
+    # w3 = Web3(Web3.TestRPCProvider())
+    print ("web3 connection established, blockNumber =", w3.eth.block_number, end=", ")
+    print ("node version string = ", w3.net.version)
     accountname="chosen"
     if not account:
         w3.eth.defaultAccount = w3.eth.accounts[0] # set first account as sender
         accountname="first"
     print (accountname + " account of node is", w3.eth.defaultAccount, end=", ")
-    print ("balance is %s Ether" % w3.fromWei(w3.eth.getBalance(w3.eth.defaultAccount), "ether"))
+    print ("balance is %s Ether" % w3.from_wei(w3.eth.get_balance(w3.eth.defaultAccount), "ether"))
     
     return w3
 
@@ -106,7 +112,7 @@ def if_poa_then_bugfix(w3, NODENAME, CHAINNAME, CONSENSUS):
     if NODENAME == "Quorum" or CHAINNAME=='500' or CONSENSUS=='clique':
         from web3.middleware import geth_poa_middleware
         # inject the poa compatibility middleware to the innermost layer
-        w3.middleware_stack.inject(geth_poa_middleware, layer=0)
+        w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
 
 # def web3connection(RPCaddress=RPCaddress, account=None):
@@ -117,7 +123,7 @@ def web3connection(RPCaddress=None, account=None):
     
     printVersions()
     
-    w3 = start_web3connection(RPCaddress=RPCaddress, account=account) 
+    w3 = start_web3connection(RPCaddress=RPCaddress, account=account)
 
     NODENAME, NODETYPE, NODEVERSION, CONSENSUS, NETWORKID, CHAINNAME, CHAINID = setGlobalVariables_clientType(w3)
 

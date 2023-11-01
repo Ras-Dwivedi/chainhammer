@@ -8,7 +8,8 @@
 @see:     https://github.com/drandreaskrueger/chainhammer for updates
 """
 import secrets
-
+import logging
+logger = logging.getLogger(__name__)
 # extend sys.path for imports:
 if __name__ == '__main__' and __package__ is None:
     from os import sys, path
@@ -258,8 +259,6 @@ def many_transactions_consecutive(contract, numTx):
         tx = contract_set(contract, i)
         print(" transaction submitted: ", tx)  # Web3.toHex(tx)) # new web3
         txs.append(tx)
-    print(txs)
-    exit(0)
     return txs
 
 
@@ -419,11 +418,17 @@ def hasTxSucceeded(tx_receipt):  # , gasGiven=GAS_FOR_SET_CALL):
 
 def receiptGetter(tx_hash, timeout, resultsDict):
     try:
-        print("here is the trx hash")
+        # print("here is the trx hash")
         print(tx_hash, timeout, resultsDict)
-        print("--------------------------------")
-        resultsDict[tx_hash] = w3.eth.wait_for_transaction_receipt(tx_hash, timeout)
-    except web3.utils.threads.Timeout:
+        # print(tx_hash.get("result"))
+        # print("--------------------------------")
+        _hash = tx_hash.get('result')
+        # print(type(_hash))
+        resultsDict[_hash] = w3.eth.wait_for_transaction_receipt(_hash, timeout)
+    # except web3.utils.threads.Timeout:
+    #     pass
+    except Exception as e:
+        logger.exception(e)
         pass
 
 
@@ -586,7 +591,7 @@ def store_experiment_data(success, num_txs,
     },
         "node": {
             "rpc_address": RPCaddress,
-            "web3.version.node": w3.version.node,
+            "web3.version.node": w3.client_version,
             "name": NODENAME,
             "type": NODETYPE,
             "version": NODEVERSION,
@@ -607,14 +612,14 @@ def wait_some_blocks(waitBlocks=EMPTY_BLOCKS_AT_END, pauseBetweenQueries=0.3):
     because ./send.py is started later than ./tps.py
     So when ./send.py ends, the analysis can happen.
     """
-    blockNumber_start = w3.eth.blockNumber
+    blockNumber_start = w3.eth.block_number
     print("blocknumber now:", blockNumber_start, end=" ")
     print("waiting for %d empty blocks:" % waitBlocks)
     bn_previous = bn_now = blockNumber_start
 
     while bn_now < waitBlocks + blockNumber_start:
         time.sleep(pauseBetweenQueries)
-        bn_now = w3.eth.blockNumber
+        bn_now = w3.eth.block_number
         # print (bn_now, waitBlocks + blockNumber_start)
         if bn_now != bn_previous:
             bn_previous = bn_now
@@ -625,6 +630,8 @@ def wait_some_blocks(waitBlocks=EMPTY_BLOCKS_AT_END, pauseBetweenQueries=0.3):
 
 
 def finish(txs, success):
+    print("called finish transaction")
+    print(txs)
     block_from, block_to = when_last_ones_mined__give_range_of_block_numbers(txs)
     txt = "Transaction receipts from beginning and end all arrived. Blockrange %d to %d."
     txt = txt % (block_from, block_to)
@@ -635,7 +642,7 @@ def finish(txs, success):
         waitBlocks = 0
     else:
         waitBlocks = EMPTY_BLOCKS_AT_END
-        wait_some_blocks(waitBlocks)
+        # wait_some_blocks(waitBlocks)
 
     store_experiment_data(success, len(txs), block_from, block_to, empty_blocks=waitBlocks)
     # print ("Data stored. This will trigger tps.py to end in ~ %d blocks." % EMPTY_BLOCKS_AT_END)
@@ -749,8 +756,9 @@ if __name__ == '__main__':
     txs = sendmany(contract)
     sys.stdout.flush()  # so that the log files are updated.
 
+    print("here 12")
     success = controlSample_transactionsSuccessful(txs)
     sys.stdout.flush()
-
+    print("here 1231")
     finish(txs, success)
     sys.stdout.flush()

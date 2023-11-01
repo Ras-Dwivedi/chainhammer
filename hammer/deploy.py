@@ -17,14 +17,14 @@ import sys, time, json
 from pprint import pprint
 
 import requests # pip3 install requests
+import solcx
 
 try:
     from web3 import Web3, HTTPProvider # pip3 install web3
-    from solcx import compile_source # pip install py-solc
+    from solc import compile_source # pip install py-solc
 except Exception as e:
     print ("Dependencies unavailable. Start virtualenv first!")
     print(e)
-    exit()
 
 
 # extend path for imports:
@@ -52,7 +52,8 @@ def compileContract(contract_source_file):
     """
     with open(contract_source_file, "r") as f:
         contract_source_code = f.read()
-    compiled_sol = compile_source(contract_source_code) # Compiled source code
+    # compiled_sol = compile_source(contract_source_code) # Compiled source code
+    compiled_sol = solcx.compile_files(contract_source_code) # Compiled source code
     assert(len(compiled_sol)==1) # assert source file has only one contract object
     
     contractName = list(compiled_sol.keys())[0] 

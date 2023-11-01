@@ -8,16 +8,18 @@ pyenv install 3.9
 
 ## install pyenv virtual env and activate the environment
 ### download the git repo
-```git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv
+```
+git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv
 ```
 ### Enable the virtual env
 ```eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 ```
- a pyenv virtial environment
+ a pyenv virtual environment
 
 ### Source bashrc
-```source ~/.bashrc 
+```
+source ~/.bashrc 
 ```
 ## Create virtual env
 ```pyenv virtualenv 3.9.7 hammer-env```
@@ -26,13 +28,23 @@ eval "$(pyenv virtualenv-init -)"
 ### upgrade pip
 ```python -m pip install --upgrade pip```
 ### before installing all the dependencies install setup tool
-```pip install --upgrade setuptools
+```
+pip install --upgrade setuptools
 ```
 Install matplotlib
-```pip install matplotlib```
-```pip install py-solc
 ```
-```pip install eth-testrpc
+pip install matplotlib```
+```
+pip install py-solc
+```
+pip install eth-testrpc
+pip install eth-tester
+```
+```
+pip install requests
+```
+```
+pip install web3
 ```
 ```sudo snap install solc```
 ### install all the dependencies
@@ -52,3 +64,16 @@ Note: There are some systems where the BASH_ENV variable is configured to point 
 
 Restart your shell so the path changes take effect. You can now begin using pyenv.
 ```$ exec "$SHELL```
+
+## On using the default venv
+**Note** that this repository contains a default venev with it.
+To use the same python venv, just use the 
+```
+source venv/bin/activate
+```
+This virtual env contains the version python `3.7.9`
+you might have to install the dependencies afterwards.
+for which you can again use 
+```
+pip install -r requirements.txt
+```
