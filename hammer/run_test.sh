@@ -37,6 +37,7 @@ fi
 for num_trx in $(seq 4000 1000 10000)
   do
     for type_of_transaction in sequential threaded1 threaded2 threaded3
+#    for type_of_transaction in threaded1 threaded2 threaded3
       do
 
         # Run tps.py and keep it running

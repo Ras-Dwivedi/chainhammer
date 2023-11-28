@@ -8,9 +8,8 @@
 @see:     https://github.com/drandreaskrueger/chainhammer for updates
 """
 import secrets
-import logging
-logger = logging.getLogger(__name__)
-# extend sys.path for imports:
+from logger import logger
+import resource
 if __name__ == '__main__' and __package__ is None:
     from os import sys, path
 
@@ -40,6 +39,8 @@ from hammer.config import GAS_FOR_SET_CALL
 from hammer.config import FILE_LAST_EXPERIMENT, EMPTY_BLOCKS_AT_END
 from hammer.deploy import loadFromDisk
 from hammer.clienttools import web3connection, unlockAccount
+
+resource.setrlimit(resource.RLIMIT_NOFILE, (65536, 65536))
 
 
 def filter_by_name(function_name, contract_abi):
@@ -760,13 +761,17 @@ if __name__ == '__main__':
         # w3.geth.personal.lock_account(address)
         logger.debug("unlocking the default account")
         w3.geth.personal.unlock_account(w3.eth.defaultAccount, password)
-    contract = initialize_fromAddress()
-    txs = sendmany(contract)
-    sys.stdout.flush()  # so that the log files are updated.
+    try:
+        contract = initialize_fromAddress()
+        txs = sendmany(contract)
+        sys.stdout.flush()  # so that the log files are updated.
 
-    print("here 12")
-    success = controlSample_transactionsSuccessful(txs)
-    sys.stdout.flush()
-    print("here 1231")
-    finish(txs, success)
-    sys.stdout.flush()
+        success = controlSample_transactionsSuccessful(txs)
+        sys.stdout.flush()
+        finish(txs, success)
+        sys.stdout.flush()
+
+    except Exception as e:
+        logger.exception("error in send.py ")
+        raise e
+

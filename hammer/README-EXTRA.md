@@ -12,17 +12,20 @@ pyenv install 3.9
 git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv
 ```
 ### Enable the virtual env
-```eval "$(pyenv init -)"
+```
+eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 ```
- a pyenv virtual environment
+## Create a pyenv virtual environment
 
 ### Source bashrc
 ```
 source ~/.bashrc 
 ```
 ## Create virtual env
-```pyenv virtualenv 3.9.7 hammer-env```
+```
+pyenv virtualenv 3.9.7 hammer-env
+```
 ### activate the virtual env
 ``` pyenv activate hammer-env```
 ### upgrade pip
