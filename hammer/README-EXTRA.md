@@ -82,3 +82,15 @@ for which you can again use
 ```
 pip install -r requirements.txt
 ```
+There might be some conflicts when installing all the requirements. You might have to relax the requirements
+
+## Deploying all the contracts
+run
+```
+python deploy_kda_contract.py 
+```
+to deploy all the contract on  the blockchain. Before this, you might have to run send.py using 
+```
+python send.py 100
+```
+to create the default address on the blockchain.

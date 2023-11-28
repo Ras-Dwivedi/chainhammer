@@ -32,14 +32,27 @@ def extract_info(file_path):
 def process_folder(input_folder, output_file):
     # List to store extracted information from all files
     data_list = []
-
+    skipped_files = [
+                        # 'sequential',
+                        'threaded1',
+                        'threaded2',
+                        'threaded3',
+                        'contract'
+                    ]
     # Traverse the folder
     for file_name in os.listdir(input_folder):
         if file_name.endswith('.json'):
+            is_skipped = False
             file_path = os.path.join(input_folder, file_name)
             print(f"filepath given is {file_path}")
-            if file_path.__contains__('contract'):
+            for skipped_file in skipped_files:
+                if file_path.__contains__(skipped_file):
+                    is_skipped = True
+            if is_skipped:
+                print(f"{file_name} has been skipped")
                 continue
+            else:
+                print(f'{file_name} processed')
             extracted_info = extract_info(file_path)
             data_list.append(extracted_info)
 
@@ -60,13 +73,33 @@ def process_folder(input_folder, output_file):
             writer.writerow(data_row)
 
 
+# def plot_figure(data_file):
+#     df = pd.read_csv(data_file)
+#
+#     # Plot the graph
+#     plt.figure(figsize=(10, 6))
+#     plt.plot(df['num_txs'], df['peakTpsAv'], label='Peak Tps')
+#     plt.plot(df['num_txs'], df['finalTpsAv'], label='Final Tps')
+#
+#     # Set labels and title
+#     plt.xlabel('num_txs')
+#     plt.ylabel('Tps')
+#     plt.title('Tps vs num_txs')
+#
+#     # Display legend
+#     plt.legend()
+#
+#     # Show the plot
+#     plt.show()
+
+
 def plot_figure(data_file):
     df = pd.read_csv(data_file)
 
-    # Plot the graph
+    # Plot the graph with circles for data points and a smooth curve
     plt.figure(figsize=(10, 6))
-    plt.plot(df['num_txs'], df['peakTpsAv'], label='Peak Tps')
-    plt.plot(df['num_txs'], df['finalTpsAv'], label='Final Tps')
+    plt.plot(df['num_txs'], df['peakTpsAv'], marker='o', linestyle='-', label='Peak Tps')
+    plt.plot(df['num_txs'], df['finalTpsAv'], marker='o', linestyle='-', label='Final Tps')
 
     # Set labels and title
     plt.xlabel('num_txs')
@@ -79,6 +112,9 @@ def plot_figure(data_file):
     # Show the plot
     plt.show()
 
+
+# Example usage:
+# plot_figure('output.csv')
 
 # Specify the input folder containing JSON files and the output CSV file
 input_folder = './'
