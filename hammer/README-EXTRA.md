@@ -27,7 +27,7 @@ source ~/.bashrc
 pyenv virtualenv 3.9.7 hammer-env
 ```
 ### activate the virtual env
-``` pyenv activate hammer-env```
+``` pyenv activate hammer-env ```
 ### upgrade pip
 ```python -m pip install --upgrade pip```
 ### before installing all the dependencies install setup tool
@@ -36,7 +36,7 @@ pip install --upgrade setuptools
 ```
 Install matplotlib
 ```
-pip install matplotlib```
+pip install matplotlib
 ```
 pip install py-solc
 ```
@@ -49,7 +49,9 @@ pip install requests
 ```
 pip install web3
 ```
-```sudo snap install solc```
+```
+sudo snap install solc
+```
 ### install all the dependencies
 ```pip install -r requirements.txt```
 
