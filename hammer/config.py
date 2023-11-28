@@ -19,10 +19,11 @@
 
 # RPCaddress='http://34.131.201.95:22001'
 # RPCaddress2='http://34.131.201.95:22001'
-
-RPCaddress='http://35.239.73.237:22001'
-RPCaddress2='http://35.239.73.237:22002'
-
+#
+# RPCaddress='http://35.239.73.237:22001'
+# RPCaddress2='http://35.239.73.237:22002'
+RPCaddress='http://34.93.170.70:22001'
+RPCaddress2='http://34.93.170.70:22002'
 # use this for unittesting with TestRPCProvider
 # RPCaddress, RPCaddress2 = None, None
 # or this for experiment runs OR for unittesting with real Ethereum nodes:

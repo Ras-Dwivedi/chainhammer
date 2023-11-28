@@ -750,8 +750,16 @@ if __name__ == '__main__':
     # w3.eth.defaultAccount = OWNER_ACCOUNT.address
     # w3.geth.personal.import_raw_key(private_key, password)
     #w3.geth.personal.lock_account(address)
-
-    w3.geth.personal.unlock_account(w3.eth.defaultAccount,password)
+    try:
+        w3.geth.personal.unlock_account(w3.eth.defaultAccount,password)
+    except Exception as e:
+        logger.exception("unable to unlock the account")
+        # creating the wallet and account
+        w3.eth.defaultAccount = OWNER_ACCOUNT.address
+        w3.geth.personal.import_raw_key(private_key, password)
+        # w3.geth.personal.lock_account(address)
+        logger.debug("unlocking the default account")
+        w3.geth.personal.unlock_account(w3.eth.defaultAccount, password)
     contract = initialize_fromAddress()
     txs = sendmany(contract)
     sys.stdout.flush()  # so that the log files are updated.

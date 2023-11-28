@@ -82,12 +82,12 @@ def analyzeNewBlocks(blockNumber, newBlockNumber, txCount, start_time, peakTpsAv
     
     txCount_new = 0
     for bl in range(blockNumber+1, newBlockNumber+1): # TODO check range again - shift by one? 
-        # txCount_new += w3.eth.getBlockTransactionCount(bl)
+        # txCount_new += w3.eth.get_blockTransactionCount(bl)
         blktx = getBlockTransactionCount(w3, bl)
         txCount_new += blktx # TODO
 
-    ts_blockNumber =    w3.eth.getBlock(   blockNumber).timestamp
-    ts_newBlockNumber = w3.eth.getBlock(newBlockNumber).timestamp
+    ts_blockNumber =    w3.eth.get_block(   blockNumber).timestamp
+    ts_newBlockNumber = w3.eth.get_block(newBlockNumber).timestamp
     ts_diff = ts_newBlockNumber - ts_blockNumber
     
     blocktimeSeconds = timestampToSeconds(ts_diff, NODENAME, CONSENSUS) 
@@ -184,7 +184,7 @@ def measurement(blockNumber, pauseBetweenQueries=0.3,
     # the block we had been waiting for already contains the first transaction/s
     # N.B.: slight inaccurracy of time measurement, because not measured how long those needed
     
-    # txCount=w3.eth.getBlockTransactionCount(blockNumber)
+    # txCount=w3.eth.get_blockTransactionCount(blockNumber)
     txCount=getBlockTransactionCount(w3, blockNumber)
     
     start_time = timeit.default_timer()
@@ -200,7 +200,7 @@ def measurement(blockNumber, pauseBetweenQueries=0.3,
     tpsAv = {} # memorize all of them, so we can return value at 'block_last'
     
     while(True):
-        newBlockNumber=w3.eth.blockNumber
+        newBlockNumber=w3.eth.block_number
         
         if(blockNumber!=newBlockNumber): # when a new block appears:
             args = (blockNumber, newBlockNumber, txCount, start_time, peakTpsAv)
@@ -237,7 +237,7 @@ def measurement(blockNumber, pauseBetweenQueries=0.3,
         
     # print ("end")   # N.B.: it never gets here !
     txt = "Experiment ended! Current blocknumber = %d"
-    txt = txt % (w3.eth.blockNumber)
+    txt = txt % (w3.eth.block_number)
     print (txt)
     return peakTpsAv, finalTpsAv, start_epochtime
 
@@ -260,11 +260,11 @@ if __name__ == '__main__':
     w3, chainInfos = web3connection(RPCaddress=RPCaddress2, account=None)
     NODENAME, NODETYPE, NODEVERSION, CONSENSUS, NETWORKID, CHAINNAME, CHAINID = chainInfos
     
-    blockNumber_before = w3.eth.blockNumber
+    blockNumber_before = w3.eth.block_number
     print ("\nBlock ",blockNumber_before," - waiting for something to happen") 
     
-    loopUntil_NewContract()
-    blocknumber_start_here = w3.eth.blockNumber 
+    # loopUntil_NewContract()
+    blocknumber_start_here = w3.eth.block_number
     print ("\nblocknumber_start_here =", blocknumber_start_here)
     
     peakTpsAv, finalTpsAv, start_epochtime = measurement( blocknumber_start_here )

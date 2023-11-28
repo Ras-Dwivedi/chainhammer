@@ -142,7 +142,7 @@ def getBlockTransactionCount(w3, blockNumber):
     """
     testRPC does not provide this endpoint yet, so replicate its functionality:
     """
-    block=w3.eth.getBlock(blockNumber)
+    block=w3.eth.get_block(blockNumber)
     # pprint (block)
     return len(block["transactions"])
     
