@@ -28,6 +28,15 @@ pyenv virtualenv 3.9.7 hammer-env
 ```
 ### activate the virtual env
 ``` pyenv activate hammer-env ```
+## Note that you migt have to install C compiler, make, open-ssl, Zlib and libzlma using 
+```
+sudo apt-get install gcc
+sudo apt-get install make
+sudo apt-get install zlib1g-dev 
+sudo apt-get install libssl-dev
+sudo apt-get install liblzma-dev
+```
+`These Instructions are for ubuntu` 
 ### upgrade pip
 ```python -m pip install --upgrade pip```
 ### before installing all the dependencies install setup tool
